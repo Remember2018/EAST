@@ -4,6 +4,7 @@ import math
 import os
 import numpy as np
 import tensorflow as tf
+from PIL import Image, ImageDraw
 
 import locality_aware_nms as nms_locality
 import lanms
@@ -189,6 +190,13 @@ def main(argv=None):
                 if not FLAGS.no_write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])
+
+                    score_img = Image.fromarray(score[0,:,:,0]*255)
+                    score_res_file = os.path.join(
+                        FLAGS.output_dir,
+                        '{}_score.png'.format(
+                            os.path.basename(im_fn).split('.')[0]))
+                    score_img.save(score_res_file)
 
 if __name__ == '__main__':
     tf.app.run()
