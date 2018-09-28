@@ -190,8 +190,8 @@ def main(argv=None):
                 if not FLAGS.no_write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])
-
-                    score_img = Image.fromarray(score[0,:,:,0]*255)
+                    print(score.shape, np.unique(score))
+                    score_img = Image.fromarray((score[0,:,:,0]*255).astype(np.uint8))
                     score_res_file = os.path.join(
                         FLAGS.output_dir,
                         '{}_score.png'.format(
