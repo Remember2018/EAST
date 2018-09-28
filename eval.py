@@ -188,9 +188,9 @@ def main(argv=None):
                             ))
                             cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(255, 255, 0), thickness=1)
 
-                            poly = [[box[0, 0], box[0, 1]], [box[1, 0], box[1, 1]], [box[2, 0], box[2, 1]], [box[3, 0], box[3, 1]]]
+                            poly = np.array([[box[0, 0], box[0, 1]], [box[1, 0], box[1, 1]], [box[2, 0], box[2, 1]], [box[3, 0], box[3, 1]]])
                             poly, angle = sort_rectangle(poly)
-                            cv2.putText(im[:, :, ::-1], '{}'.format(angle), (box[0, 0], box[0, 1]), cv::FONT_HERSHEY_PLAIN, 1)
+                            cv2.putText(im[:, :, ::-1], '{}'.format(angle), (box[0, 0], box[0, 1]), cv2.FONT_HERSHEY_PLAIN, 1, (255,255,255), 1)
                             
                 if not FLAGS.no_write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
