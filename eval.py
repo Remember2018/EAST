@@ -16,7 +16,7 @@ tf.app.flags.DEFINE_string('output_dir', '/tmp/ch4_test_images/images/', '')
 tf.app.flags.DEFINE_bool('no_write_images', False, 'do not write images')
 
 import model
-from icdar import restore_rectangle
+from icdar import restore_rectangle, sort_rectangle
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -187,6 +187,11 @@ def main(argv=None):
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
                             ))
                             cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(255, 255, 0), thickness=1)
+
+                            poly = [[box[0, 0], box[0, 1]], [box[1, 0], box[1, 1]], [box[2, 0], box[2, 1]], [box[3, 0], box[3, 1]]]
+                            poly, angle = sort_rectangle(poly)
+                            cv2.putText(im[:, :, ::-1], '{}'.format(angle), (box[0, 0], box[0, 1]), cv::FONT_HERSHEY_PLAIN, 1)
+                            
                 if not FLAGS.no_write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])
