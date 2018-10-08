@@ -96,7 +96,9 @@ def detect(score_map, geo_map, timer, score_map_thresh=0.8, box_thresh=0.1, nms_
     # nms part
     start = time.time()
     # boxes = nms_locality.nms_locality(boxes.astype(np.float64), nms_thres)
+    print('{} boxes before NMS'.format(boxes.shape[0]))
     boxes = lanms.merge_quadrangle_n9(boxes.astype('float32'), nms_thres)
+    print('{} boxes after  NMS'.format(boxes.shape[0]))
     timer['nms'] = time.time() - start
 
     if boxes.shape[0] == 0:
