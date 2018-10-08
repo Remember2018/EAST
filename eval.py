@@ -180,11 +180,11 @@ def main(argv=None):
                     with open(res_file, 'w') as f:
                         f.write('1.0\n')
                         f.write('{}\n'.format(im_fn))
-                        f.write('EvaVision01')
+                        f.write('R18')
                         for box in boxes:
                             # to avoid submitting errors
                             box = sort_poly(box.astype(np.int32))
-                            if np.linalg.norm(box[0] - box[1]) < 5 or np.linalg.norm(box[3]-box[0]) < 5:
+                            if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
                                 continue
                             label = 0
                             f.write('quad,{},{},{},{},{},{},{},{},{},easy\n'.format(
