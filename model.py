@@ -114,11 +114,13 @@ def loss(y_true_cls, y_pred_cls,
     :param training_mask: mask used in training, to ignore some text annotated by ###
     :return:
     '''
-    y_true_cls_onehot = tf.one_hot(y_true_cls, depth=3)
-    y_true_cls_1 = y_true_cls_onehot[...,1]
-    y_true_cls_2 = y_true_cls_onehot[...,2]
-    classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls[...,0], training_mask)
-    classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls[...,1], training_mask)
+    y_true_cls_onehot = tf.one_hot(tf.cast(y_true_cls[...,0], tf.uint8), depth=3,axis=-1)
+    y_true_cls_1 = tf.expand_dims(y_true_cls_onehot[...,1],-1)
+    y_true_cls_2 = tf.expand_dims(y_true_cls_onehot[...,2],-1)
+    y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,0],-1)
+    y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,1],-1)
+    classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
+    classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
     # scale classification loss to match the iou loss part
     classification_loss = (classification_loss_1 + classification_loss_2) * 0.01
 
