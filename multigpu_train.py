@@ -15,6 +15,7 @@ tf.app.flags.DEFINE_boolean('restore', False, 'whether to resotre from checkpoin
 tf.app.flags.DEFINE_integer('save_checkpoint_steps', 1000, '')
 tf.app.flags.DEFINE_integer('save_summary_steps', 100, '')
 tf.app.flags.DEFINE_string('pretrained_model_path', None, '')
+tf.app.flags.DEFINE_string('loss_type', 'dice', '')
 
 import model
 import icdar
@@ -31,7 +32,9 @@ def tower_loss(images, score_maps, geo_maps, training_masks, reuse_variables=Non
 
     model_loss = model.loss(score_maps, f_score,
                             geo_maps, f_geometry,
-                            training_masks)
+                            training_masks,
+                            loss_type=FLAGS.loss_type)
+
     total_loss = tf.add_n([model_loss] + tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
 
     # add summary
