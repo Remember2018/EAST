@@ -187,7 +187,7 @@ def main(argv=None):
                             if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
                                 continue
                             label = 0
-                            f.write('quad,{},{},{},{},{},{},{},{},{}\n'.format(
+                            f.write('quad,{},{},{},{},{},{},{},{},{},easy\n'.format(
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
                                 label
                             ))
