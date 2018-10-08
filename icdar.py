@@ -60,11 +60,12 @@ def load_annoataion(p):
 
             x1, y1, x2, y2, x3, y3, x4, y4 = list(map(float, line[:8]))
             text_polys.append([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
-            if label == '*' or label == '###':
-                text_tags.append(True)
-            else:
-                text_tags.append(False)
-        return np.array(text_polys, dtype=np.float32), np.array(text_tags, dtype=np.bool)
+            # if label == '*' or label == '###':
+            #    text_tags.append(True)
+            # else:
+            #    text_tags.append(False)
+            text_tags.append(label)
+        return np.array(text_polys, dtype=np.float32), np.array(text_tags, dtype=np.str)
 
 
 def polygon_area(poly):
@@ -477,15 +478,18 @@ def generate_rbox(im_size, polys, tags):
                        np.linalg.norm(poly[i] - poly[(i - 1) % 4]))
         # score map
         shrinked_poly = shrink_poly(poly.copy(), r).astype(np.int32)[np.newaxis, :, :]
-        cv2.fillPoly(score_map, shrinked_poly, 1)
+        if tag[0]=='p':
+            cv2.fillPoly(score_map, shrinked_poly, 2) # class 2
+        else:
+            cv2.fillPoly(score_map, shrinked_poly, 1) # class 1: text
         cv2.fillPoly(poly_mask, shrinked_poly, poly_idx + 1)
         # if the poly is too small, then ignore it during training
         poly_h = min(np.linalg.norm(poly[0] - poly[3]), np.linalg.norm(poly[1] - poly[2]))
         poly_w = min(np.linalg.norm(poly[0] - poly[1]), np.linalg.norm(poly[2] - poly[3]))
         if min(poly_h, poly_w) < FLAGS.min_text_size:
             cv2.fillPoly(training_mask, poly.astype(np.int32)[np.newaxis, :, :], 0)
-        if tag:
-            cv2.fillPoly(training_mask, poly.astype(np.int32)[np.newaxis, :, :], 0)
+        # if tag:
+        #     cv2.fillPoly(training_mask, poly.astype(np.int32)[np.newaxis, :, :], 0)
 
         xy_in_poly = np.argwhere(poly_mask == (poly_idx + 1))
         # if geometry == 'RBOX':

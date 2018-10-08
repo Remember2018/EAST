@@ -73,7 +73,7 @@ def model(images, weight_decay=1e-5, is_training=True):
             # here we use a slightly different way for regression part,
             # we first use a sigmoid to limit the regression range, and also
             # this is do with the angle map
-            F_score = slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None)
+            F_score = slim.conv2d(g[3], 2, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) # here, we have two classes
             # 4 channel of axis aligned bbox and 1 channel rotation angle
             geo_map = slim.conv2d(g[3], 4, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) * FLAGS.text_scale
             angle_map = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
@@ -114,9 +114,13 @@ def loss(y_true_cls, y_pred_cls,
     :param training_mask: mask used in training, to ignore some text annotated by ###
     :return:
     '''
-    classification_loss = dice_coefficient(y_true_cls, y_pred_cls, training_mask)
+    y_true_cls_onehot = tf.one_hot(y_true_cls, depth=3)
+    y_true_cls_1 = y_true_cls_onehot[...,1]
+    y_true_cls_2 = y_true_cls_onehot[...,2]
+    classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls[...,0], training_mask)
+    classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls[...,1], training_mask)
     # scale classification loss to match the iou loss part
-    classification_loss *= 0.01
+    classification_loss = (classification_loss_1 + classification_loss_2) * 0.01
 
     # d1 -> top, d2->right, d3->bottom, d4->left
     d1_gt, d2_gt, d3_gt, d4_gt, theta_gt = tf.split(value=y_true_geo, num_or_size_splits=5, axis=3)
@@ -131,6 +135,8 @@ def loss(y_true_cls, y_pred_cls,
     L_theta = 1 - tf.cos(theta_pred - theta_gt)
     tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_cls * training_mask))
     tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_cls * training_mask))
+    tf.summary.scalar('classification_loss_1', classification_loss_1)
+    tf.summary.scalar('classification_loss_2', classification_loss_2)
     L_g = L_AABB + 20 * L_theta
 
     return tf.reduce_mean(L_g * y_true_cls * training_mask) + classification_loss

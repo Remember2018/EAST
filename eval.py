@@ -96,7 +96,9 @@ def detect(score_map, geo_map, timer, score_map_thresh=0.8, box_thresh=0.1, nms_
     # nms part
     start = time.time()
     # boxes = nms_locality.nms_locality(boxes.astype(np.float64), nms_thres)
+    print('{} boxes before NMS'.format(boxes.shape[0]))
     boxes = lanms.merge_quadrangle_n9(boxes.astype('float32'), nms_thres)
+    print('{} boxes after  NMS'.format(boxes.shape[0]))
     timer['nms'] = time.time() - start
 
     if boxes.shape[0] == 0:
@@ -180,12 +182,13 @@ def main(argv=None):
                     with open(res_file, 'w') as f:
                         f.write('1.0\n')
                         f.write('{}\n'.format(im_fn))
-                        f.write('R18')
+                        f.write('R18\n')
                         for box in boxes:
                             # to avoid submitting errors
-                            box = sort_poly(box.astype(np.int32))
-                            if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
-                                continue
+                            box = box.astype(np.int32)
+                            # box = sort_poly(box.astype(np.int32))
+                            # if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
+                            #     continue
                             label = 0
                             f.write('quad,{},{},{},{},{},{},{},{},{},easy\n'.format(
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
