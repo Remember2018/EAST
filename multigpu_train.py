@@ -40,7 +40,7 @@ def tower_loss(images, score_maps, geo_maps, training_masks, reuse_variables=Non
     # add summary
     score_maps_onehot = tf.one_hot(tf.cast(score_maps[...,0],tf.uint8), depth=3, axis=3)
     _, score_map_1, score_map_2 = tf.split(score_maps_onehot, [1,1,1], axis=-1)
-    f_score_1, f_score_2 = tf.split(f_score, [1,1], axis=-1)
+    _, f_score_1, f_score_2 = tf.split(f_score, [1,1,1], axis=-1)
     # if reuse_variables is None:
     tf.summary.image('input', images)
     tf.summary.image('score_map_1', score_map_1)
