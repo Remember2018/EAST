@@ -183,9 +183,10 @@ def main(argv=None):
                         f.write('R18\n')
                         for box in boxes:
                             # to avoid submitting errors
-                            box = sort_poly(box.astype(np.int32))
-                            if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
-                                continue
+                            box = box.astype(np.int32)
+                            # box = sort_poly(box.astype(np.int32))
+                            # if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
+                            #     continue
                             label = 0
                             f.write('quad,{},{},{},{},{},{},{},{},{},easy\n'.format(
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
