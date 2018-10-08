@@ -178,19 +178,24 @@ def main(argv=None):
                             os.path.basename(im_fn).split('.')[0]))
 
                     with open(res_file, 'w') as f:
+                        f.write('1.0\n')
+                        f.write('{}\n'.format(im_fn))
+                        f.write('R18\n')
                         for box in boxes:
                             # to avoid submitting errors
                             box = sort_poly(box.astype(np.int32))
-                            if np.linalg.norm(box[0] - box[1]) < 5 or np.linalg.norm(box[3]-box[0]) < 5:
+                            if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
                                 continue
-                            f.write('{},{},{},{},{},{},{},{}\r\n'.format(
+                            label = 0
+                            f.write('quad,{},{},{},{},{},{},{},{},{}\n'.format(
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
+                                label
                             ))
                             cv2.polylines(im[:, :, ::-1], [box.astype(np.int32).reshape((-1, 1, 2))], True, color=(255, 255, 0), thickness=1)
 
-                            poly = np.array([[box[0, 0], box[0, 1]], [box[1, 0], box[1, 1]], [box[2, 0], box[2, 1]], [box[3, 0], box[3, 1]]])
-                            poly, angle = sort_rectangle(poly)
-                            cv2.putText(im[:, :, ::-1], '{}'.format(angle), (box[0, 0], box[0, 1]), cv2.FONT_HERSHEY_PLAIN, 1, (255,255,255), 1)
+                            # poly = np.array([[box[0, 0], box[0, 1]], [box[1, 0], box[1, 1]], [box[2, 0], box[2, 1]], [box[3, 0], box[3, 1]]])
+                            # poly, angle = sort_rectangle(poly)
+                            # cv2.putText(im[:, :, ::-1], '{}'.format(angle), (box[0, 0], box[0, 1]), cv2.FONT_HERSHEY_PLAIN, 1, (255,255,255), 1)
                             
                 if not FLAGS.no_write_images:
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
