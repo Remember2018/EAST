@@ -14,6 +14,15 @@ tf.app.flags.DEFINE_string('gpu_list', '0', '')
 tf.app.flags.DEFINE_string('checkpoint_path', '/tmp/east_icdar2015_resnet_v1_50_rbox/', '')
 tf.app.flags.DEFINE_string('output_dir', '/tmp/ch4_test_images/images/', '')
 tf.app.flags.DEFINE_bool('no_write_images', False, 'do not write images')
+tf.app.flags.DEFINE_float('score1_map_thresh', 0.8,'score_map_thresh')
+tf.app.flags.DEFINE_float('score2_map_thresh', 0.6,'score_map_thresh')
+tf.app.flags.DEFINE_float('box1_thresh', 0.1,'box_thresh')
+tf.app.flags.DEFINE_float('box2_thresh', 0.1,'box_thresh')
+tf.app.flags.DEFINE_float('nms1_thresh', 0.1,'nms_thresh')
+tf.app.flags.DEFINE_float('nms2_thresh', 0.1,'nms_thresh')
+
+
+
 
 import model
 from icdar import restore_rectangle, sort_rectangle
@@ -88,7 +97,7 @@ def detect(score_map, geo_map, timer, score_map_thresh=0.8, box_thresh=0.1, nms_
     # restore
     start = time.time()
     text_box_restored = restore_rectangle(xy_text[:, ::-1]*4, geo_map[xy_text[:, 0], xy_text[:, 1], :]) # N*4*2
-    print('{} text boxes before nms'.format(text_box_restored.shape[0]))
+    # print('{} text boxes before nms'.format(text_box_restored.shape[0]))
     boxes = np.zeros((text_box_restored.shape[0], 9), dtype=np.float32)
     boxes[:, :8] = text_box_restored.reshape((-1, 8))
     boxes[:, 8] = score_map[xy_text[:, 0], xy_text[:, 1]]
@@ -102,14 +111,14 @@ def detect(score_map, geo_map, timer, score_map_thresh=0.8, box_thresh=0.1, nms_
     timer['nms'] = time.time() - start
 
     if boxes.shape[0] == 0:
-        return None, timer
+        return np.zeros((0,9),dtype=np.float32), timer
 
     # here we filter some low score boxes by the average score map, this is different from the orginal paper
-    for i, box in enumerate(boxes):
-        mask = np.zeros_like(score_map, dtype=np.uint8)
-        cv2.fillPoly(mask, box[:8].reshape((-1, 4, 2)).astype(np.int32) // 4, 1)
-        boxes[i, 8] = cv2.mean(score_map, mask)[0]
-    boxes = boxes[boxes[:, 8] > box_thresh]
+    # for i, box in enumerate(boxes):
+    #     mask = np.zeros_like(score_map, dtype=np.uint8)
+    #     cv2.fillPoly(mask, box[:8].reshape((-1, 4, 2)).astype(np.int32) // 4, 1)
+    #     boxes[i, 8] = cv2.mean(score_map, mask)[0]
+    # boxes = boxes[boxes[:, 8] > box_thresh]
 
     return boxes, timer
 
@@ -160,7 +169,11 @@ def main(argv=None):
                 score, geometry = sess.run([f_score, f_geometry], feed_dict={input_images: [im_resized]})
                 timer['net'] = time.time() - start
 
-                boxes, timer = detect(score_map=score, geo_map=geometry, timer=timer)
+                boxes1, timer = detect(score_map=score[...,1][...,np.newaxis], score_map_thresh=FLAGS.score1_map_thresh, box_thresh=FLAGS.box1_thresh, nms_thres=FLAGS.nms1_thresh,geo_map=geometry, timer=timer)
+                boxes2, timer = detect(score_map=score[...,2][...,np.newaxis], score_map_thresh=FLAGS.score2_map_thresh, box_thresh=FLAGS.box2_thresh, nms_thres=FLAGS.nms2_thresh,geo_map=geometry, timer=timer)
+                boxes = np.concatenate([boxes1,boxes2],axis=0)
+                num_text_boxes = boxes1.shape[0]
+
                 print('{} : net {:.0f}ms, restore {:.0f}ms, nms {:.0f}ms'.format(
                     im_fn, timer['net']*1000, timer['restore']*1000, timer['nms']*1000))
 
@@ -183,13 +196,16 @@ def main(argv=None):
                         f.write('1.0\n')
                         f.write('{}\n'.format(im_fn))
                         f.write('R18\n')
-                        for box in boxes:
+                        for bi,box in enumerate(boxes):
                             # to avoid submitting errors
                             box = box.astype(np.int32)
                             # box = sort_poly(box.astype(np.int32))
                             # if np.linalg.norm(box[0] - box[1]) < 3 or np.linalg.norm(box[3]-box[0]) < 3:
                             #     continue
-                            label = 0
+                            if bi<num_text_boxes:
+                            	label = 0
+                            else:
+                                label = 'p'
                             f.write('quad,{},{},{},{},{},{},{},{},{},easy\n'.format(
                                 box[0, 0], box[0, 1], box[1, 0], box[1, 1], box[2, 0], box[2, 1], box[3, 0], box[3, 1],
                                 label
@@ -204,12 +220,19 @@ def main(argv=None):
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])
                     print(score.shape, np.unique(score))
-                    score_img = Image.fromarray((score[0,:,:,0]*255).astype(np.uint8))
+                    score_img = Image.fromarray((score[0,:,:,1]*255).astype(np.uint8))
                     score_res_file = os.path.join(
                         FLAGS.output_dir,
-                        '{}_score.png'.format(
+                        '{}_score1.png'.format(
                             os.path.basename(im_fn).split('.')[0]))
                     score_img.save(score_res_file)
+                    score_img = Image.fromarray((score[0,:,:,2]*255).astype(np.uint8))
+                    score_res_file = os.path.join(
+                        FLAGS.output_dir,
+                        '{}_score2.png'.format(
+                            os.path.basename(im_fn).split('.')[0]))
+                    score_img.save(score_res_file)
+
 
 if __name__ == '__main__':
     tf.app.run()
