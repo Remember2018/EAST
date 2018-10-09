@@ -124,11 +124,11 @@ def loss(y_true_cls, y_pred_cls,
         classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
         classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
         # scale classification loss to match the iou loss part
-        classification_loss = (classification_loss_1 + classification_loss_2) * 0.01
+        classification_loss = (classification_loss_1 + classification_loss_2)
     elif loss_type=='sce':
         # y_true_cls: [N,H,W,1]
         # y_pred_cls: [N,H,W,2]
-        classification_loss = 0.01 * tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y_pred_cls,labels=tf.cast(y_true_cls[...,0],tf.int32)))
+        classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y_pred_cls,labels=tf.cast(y_true_cls[...,0],tf.int32)))
 
     # d1 -> top, d2->right, d3->bottom, d4->left
     d1_gt, d2_gt, d3_gt, d4_gt, theta_gt = tf.split(value=y_true_geo, num_or_size_splits=5, axis=3)
@@ -144,6 +144,6 @@ def loss(y_true_cls, y_pred_cls,
     tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_cls * training_mask))
     tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_cls * training_mask))
     tf.summary.scalar('classification_loss', classification_loss)
-    L_g = L_AABB + 20 * L_theta
+    L_g = L_AABB + 10 * L_theta
 
-    return tf.reduce_mean(L_g * y_true_cls * training_mask) + classification_loss
+    return tf.reduce_mean(L_g * y_true_cls * training_mask) + 0.01 * classification_loss

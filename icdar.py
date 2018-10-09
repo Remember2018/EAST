@@ -477,7 +477,7 @@ def generate_rbox(im_size, polys, tags):
             r[i] = min(np.linalg.norm(poly[i] - poly[(i + 1) % 4]),
                        np.linalg.norm(poly[i] - poly[(i - 1) % 4]))
         # score map
-        shrinked_poly = shrink_poly(poly.copy(), r).astype(np.int32)[np.newaxis, :, :]
+        shrinked_poly = poly.astype(np.int32)[np.newaxis,:,:] #shrink_poly(poly.copy(), r).astype(np.int32)[np.newaxis, :, :]
         if tag[0]=='p':
             cv2.fillPoly(score_map, shrinked_poly, 2) # class 2
         else:
