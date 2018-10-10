@@ -38,9 +38,8 @@ def tower_loss(images, score_maps, geo_maps, training_masks, reuse_variables=Non
     total_loss = tf.add_n([model_loss] + tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
 
     # add summary
-    score_maps_onehot = tf.one_hot(tf.cast(score_maps[...,0],tf.uint8), depth=3, axis=3)
-    _, score_map_1, score_map_2 = tf.split(score_maps_onehot, [1,1,1], axis=-1)
-    _, f_score_1, f_score_2 = tf.split(f_score, [1,1,1], axis=-1)
+    score_map_1, score_map_2 = tf.split(score_maps, [1,1], axis=-1)
+    f_score_1, f_score_2 = tf.split(f_score, [1,1], axis=-1)
     # if reuse_variables is None:
     tf.summary.image('input', images)
     tf.summary.image('score_map_1', score_map_1)
@@ -84,7 +83,7 @@ def main(argv=None):
             tf.gfile.DeleteRecursively(FLAGS.checkpoint_path)
             tf.gfile.MkDir(FLAGS.checkpoint_path)
 
-    input_images = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='input_images')
+    input_images = tf.placeholder(tf.float32, shape=[None, None, None, 2], name='input_images')
     input_score_maps = tf.placeholder(tf.float32, shape=[None, None, None, 1], name='input_score_maps')
     if FLAGS.geometry == 'RBOX':
         input_geo_maps = tf.placeholder(tf.float32, shape=[None, None, None, 5], name='input_geo_maps')

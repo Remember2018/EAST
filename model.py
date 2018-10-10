@@ -73,7 +73,7 @@ def model(images, weight_decay=1e-5, is_training=True):
             # here we use a slightly different way for regression part,
             # we first use a sigmoid to limit the regression range, and also
             # this is do with the angle map
-            F_score = slim.conv2d(g[3], 3, 1, activation_fn=None, normalizer_fn=None) # here, we have two classes
+            F_score = slim.conv2d(g[3], 2, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) # here, we have two classes
             # 4 channel of axis aligned bbox and 1 channel rotation angle
             geo_map = slim.conv2d(g[3], 4, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) * FLAGS.text_scale
             angle_map = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
@@ -115,12 +115,10 @@ def loss(y_true_cls, y_pred_cls,
     :return:
     '''
     if loss_type=='dice':
-        y_pred_cls = tf.nn.sigmoid(y_pred_cls)
-        y_true_cls_onehot = tf.one_hot(tf.cast(y_true_cls[...,0], tf.uint8), depth=3,axis=-1)
-        y_true_cls_1 = tf.expand_dims(y_true_cls_onehot[...,1],-1)
-        y_true_cls_2 = tf.expand_dims(y_true_cls_onehot[...,2],-1)
-        y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,1],-1)
-        y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,2],-1)
+        y_true_cls_1 = tf.expand_dims(y_true_cls[...,0],-1)
+        y_true_cls_2 = tf.expand_dims(y_true_cls[...,1],-1)
+        y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,0],-1)
+        y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,1],-1)
         classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
         classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
         # scale classification loss to match the iou loss part

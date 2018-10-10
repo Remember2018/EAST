@@ -464,7 +464,7 @@ def restore_rectangle(origin, geometry):
 def generate_rbox(im_size, polys, tags):
     h, w = im_size
     poly_mask = np.zeros((h, w), dtype=np.uint8)
-    score_map = np.zeros((h, w), dtype=np.uint8)
+    score_map = np.zeros((h, w, 2), dtype=np.uint8)
     geo_map = np.zeros((h, w, 5), dtype=np.float32)
     # mask used during traning, to ignore some hard areas
     training_mask = np.ones((h, w), dtype=np.uint8)
@@ -479,9 +479,9 @@ def generate_rbox(im_size, polys, tags):
         # score map
         shrinked_poly = poly.astype(np.int32)[np.newaxis,:,:] #shrink_poly(poly.copy(), r).astype(np.int32)[np.newaxis, :, :]
         if tag[0]=='p':
-            cv2.fillPoly(score_map, shrinked_poly, 2) # class 2
+            cv2.fillPoly(score_map[:,:,1], shrinked_poly, 1) # class 2
         else:
-            cv2.fillPoly(score_map, shrinked_poly, 1) # class 1: text
+            cv2.fillPoly(score_map[:,:,0], shrinked_poly, 1) # class 1: text
         cv2.fillPoly(poly_mask, shrinked_poly, poly_idx + 1)
         # if the poly is too small, then ignore it during training
         poly_h = min(np.linalg.norm(poly[0] - poly[3]), np.linalg.norm(poly[1] - poly[2]))
@@ -633,7 +633,7 @@ def generator(input_size=512, batch_size=32,
                     im_padded = np.zeros((max_h_w_i, max_h_w_i, 3), dtype=np.uint8)
                     im_padded[:new_h, :new_w, :] = im.copy()
                     im = cv2.resize(im_padded, dsize=(input_size, input_size))
-                    score_map = np.zeros((input_size, input_size), dtype=np.uint8)
+                    score_map = np.zeros((input_size, input_size,2), dtype=np.uint8)
                     geo_map_channels = 5 if FLAGS.geometry == 'RBOX' else 8
                     geo_map = np.zeros((input_size, input_size, geo_map_channels), dtype=np.float32)
                     training_mask = np.ones((input_size, input_size), dtype=np.uint8)
@@ -685,7 +685,7 @@ def generator(input_size=512, batch_size=32,
                         axs[0, 0].add_artist(Patches.Polygon(
                             poly, facecolor='none', edgecolor='green', linewidth=2, linestyle='-', fill=True))
                         axs[0, 0].text(poly[0, 0], poly[0, 1], '{:.0f}-{:.0f}'.format(poly_h, poly_w), color='purple')
-                    axs[0, 1].imshow(score_map[::, ::])
+                    axs[0, 1].imshow(score_map[::, ::,0])
                     axs[0, 1].set_xticks([])
                     axs[0, 1].set_yticks([])
                     axs[1, 0].imshow(geo_map[::, ::, 0])
@@ -706,7 +706,7 @@ def generator(input_size=512, batch_size=32,
 
                 images.append(im[:, :, ::-1].astype(np.float32))
                 image_fns.append(im_fn)
-                score_maps.append(score_map[::4, ::4, np.newaxis].astype(np.float32))
+                score_maps.append(score_map[::4, ::4, :].astype(np.float32))
                 geo_maps.append(geo_map[::4, ::4, :].astype(np.float32))
                 training_masks.append(training_mask[::4, ::4, np.newaxis].astype(np.float32))
 
