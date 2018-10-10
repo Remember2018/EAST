@@ -114,19 +114,16 @@ def loss(y_true_cls, y_pred_cls,
     :param training_mask: mask used in training, to ignore some text annotated by ###
     :return:
     '''
-    if loss_type=='dice':
-        y_true_cls_1 = tf.expand_dims(y_true_cls[...,0],-1)
-        y_true_cls_2 = tf.expand_dims(y_true_cls[...,1],-1)
-        y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,0],-1)
-        y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,1],-1)
-        classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
-        classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
-        # scale classification loss to match the iou loss part
-        classification_loss = (classification_loss_1 + classification_loss_2)
-    elif loss_type=='sce':
-        # y_true_cls: [N,H,W,1]
-        # y_pred_cls: [N,H,W,2]
-        classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y_pred_cls,labels=tf.cast(y_true_cls[...,0],tf.int32)))
+    y_true_cls_1 = tf.expand_dims(y_true_cls[...,0],-1)
+    y_true_cls_2 = tf.expand_dims(y_true_cls[...,1],-1)
+    y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,0],-1)
+    y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,1],-1)
+    classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
+    classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
+    # scale classification loss to match the iou loss part
+    classification_loss = (classification_loss_1 + classification_loss_2)
+
+    y_true_mask = tf.logical_and(tf.where(y_true_cls_1,1), tf.where(y_true_cls_2,1))
 
     # d1 -> top, d2->right, d3->bottom, d4->left
     d1_gt, d2_gt, d3_gt, d4_gt, theta_gt = tf.split(value=y_true_geo, num_or_size_splits=5, axis=3)
@@ -139,9 +136,9 @@ def loss(y_true_cls, y_pred_cls,
     area_union = area_gt + area_pred - area_intersect
     L_AABB = -tf.log((area_intersect + 1.0)/(area_union + 1.0))
     L_theta = 1 - tf.cos(theta_pred - theta_gt)
-    tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_cls * training_mask))
-    tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_cls * training_mask))
+    tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_mask * training_mask))
+    tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_mask * training_mask))
     tf.summary.scalar('classification_loss', classification_loss)
     L_g = L_AABB + 10 * L_theta
 
-    return tf.reduce_mean(L_g * y_true_cls * training_mask) + 0.01 * classification_loss
+    return tf.reduce_mean(L_g * y_true_mask * training_mask) + 0.01 * classification_loss
