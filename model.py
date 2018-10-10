@@ -80,7 +80,7 @@ def model(images, weight_decay=1e-5, is_training=True):
             F_geometry1 = tf.concat([geo_map1, angle_map1], axis=-1)
             geo_map2 = slim.conv2d(g[3], 4, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) * FLAGS.text_scale
             angle_map2 = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
-            F_geometry2 = tf.concat([geo_map, angle_map], axis=-1)
+            F_geometry2 = tf.concat([geo_map2, angle_map2], axis=-1)
             F_geometry = tf.concat([F_geometry1, F_geometry2], axis=-1)
 
     return F_score, F_geometry
@@ -142,7 +142,8 @@ def loss(y_true_cls, y_pred_cls,
         L_theta = 1 - tf.cos(theta_pred - theta_gt)
         return L_AABB, L_theta
     
-    y_true_mask = tf.logical_and(tf.greater_equal(y_true_cls_1,1), tf.greater_equal(y_true_cls_2,1))
+    y_true_mask = tf.cast(tf.logical_and(tf.greater_equal(y_true_cls_1,1), tf.greater_equal(y_true_cls_2,1)),tf.float32)
+
     y_true_geo1, y_true_geo2 = tf.split(y_true_geo_two, num_or_size_splits=2, axis=3)
     y_pred_geo1, y_pred_geo2 = tf.split(y_pred_geo_two, num_or_size_splits=2, axis=3)
     L_AABB1, L_theta1 = loss_(y_true_geo1, y_pred_geo1)
