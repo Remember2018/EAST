@@ -172,6 +172,8 @@ def main(argv=None):
                 score, geometry = sess.run([f_score, f_geometry], feed_dict={input_images: [im_resized]})
                 timer['net'] = time.time() - start
 
+                angle1_map = geometry[0,:,:,4]
+
                 boxes1, timer = detect(score_map=score[...,0][...,np.newaxis], score_map_thresh=FLAGS.score1_map_thresh, box_thresh=FLAGS.box1_thresh, nms_thres=FLAGS.nms1_thresh,geo_map=geometry, timer=timer)
                 boxes2, timer = detect(score_map=score[...,1][...,np.newaxis], score_map_thresh=FLAGS.score2_map_thresh, box_thresh=FLAGS.box2_thresh, nms_thres=FLAGS.nms2_thresh,geo_map=geometry, timer=timer)
                 boxes = np.concatenate([boxes1,boxes2],axis=0)
@@ -233,6 +235,13 @@ def main(argv=None):
                     score_res_file = os.path.join(
                         FLAGS.output_dir,
                         '{}_score2.png'.format(
+                            os.path.basename(im_fn).split('.')[0]))
+                    score_img.save(score_res_file)
+
+                    score_img = Image.fromarray((geometry[0,:,:,4]).astype(np.uint8))
+                    score_res_file = os.path.join(
+                        FLAGS.output_dir,
+                        '{}_anglemap.png'.format(
                             os.path.basename(im_fn).split('.')[0]))
                     score_img.save(score_res_file)
 
