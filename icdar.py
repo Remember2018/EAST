@@ -464,7 +464,8 @@ def restore_rectangle(origin, geometry):
 def generate_rbox(im_size, polys, tags):
     h, w = im_size
     poly_mask = np.zeros((h, w), dtype=np.uint8)
-    score_map = np.zeros((h, w, 2), dtype=np.uint8)
+    score_map1 = np.zeros((h, w), dtype=np.uint8)
+    score_map2 = np.zeros((h, w), dtype=np.uint8)
     geo_map = np.zeros((h, w, 5), dtype=np.float32)
     # mask used during traning, to ignore some hard areas
     training_mask = np.ones((h, w), dtype=np.uint8)
@@ -479,9 +480,9 @@ def generate_rbox(im_size, polys, tags):
         # score map
         shrinked_poly = poly.astype(np.int32)[np.newaxis,:,:] #shrink_poly(poly.copy(), r).astype(np.int32)[np.newaxis, :, :]
         if tag[0]=='p':
-            cv2.fillPoly(score_map[:,:,1], shrinked_poly, 1) # class 2
+            cv2.fillPoly(score_map2, shrinked_poly, 1) # class 2
         else:
-            cv2.fillPoly(score_map[:,:,0], shrinked_poly, 1) # class 1: text
+            cv2.fillPoly(score_map1, shrinked_poly, 1) # class 1: text
         cv2.fillPoly(poly_mask, shrinked_poly, poly_idx + 1)
         # if the poly is too small, then ignore it during training
         poly_h = min(np.linalg.norm(poly[0] - poly[3]), np.linalg.norm(poly[1] - poly[2]))
@@ -581,6 +582,7 @@ def generate_rbox(im_size, polys, tags):
             geo_map[y, x, 3] = point_dist_to_line(p3_rect, p0_rect, point)
             # angle
             geo_map[y, x, 4] = rotate_angle
+    score_map = np.concatenate([score_map1[...,np.newaxis],score_map2[...,np.newaxis]],axis=2)
     return score_map, geo_map, training_mask
 
 

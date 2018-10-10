@@ -83,8 +83,8 @@ def main(argv=None):
             tf.gfile.DeleteRecursively(FLAGS.checkpoint_path)
             tf.gfile.MkDir(FLAGS.checkpoint_path)
 
-    input_images = tf.placeholder(tf.float32, shape=[None, None, None, 2], name='input_images')
-    input_score_maps = tf.placeholder(tf.float32, shape=[None, None, None, 1], name='input_score_maps')
+    input_images = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='input_images')
+    input_score_maps = tf.placeholder(tf.float32, shape=[None, None, None, 2], name='input_score_maps')
     if FLAGS.geometry == 'RBOX':
         input_geo_maps = tf.placeholder(tf.float32, shape=[None, None, None, 5], name='input_geo_maps')
     else:
