@@ -152,7 +152,10 @@ def main(argv=None):
         variable_averages = tf.train.ExponentialMovingAverage(0.997, global_step)
         saver = tf.train.Saver(variable_averages.variables_to_restore())
 
-        with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+        config = tf.ConfigProto()
+        config.allow_soft_placement = True
+        config.gpu_options.allow_growth = True
+        with tf.Session(config=config) as sess:
             ckpt_state = tf.train.get_checkpoint_state(FLAGS.checkpoint_path)
             model_path = os.path.join(FLAGS.checkpoint_path, os.path.basename(ckpt_state.model_checkpoint_path))
             print('Restore from {}'.format(model_path))
@@ -169,8 +172,8 @@ def main(argv=None):
                 score, geometry = sess.run([f_score, f_geometry], feed_dict={input_images: [im_resized]})
                 timer['net'] = time.time() - start
 
-                boxes1, timer = detect(score_map=score[...,1][...,np.newaxis], score_map_thresh=FLAGS.score1_map_thresh, box_thresh=FLAGS.box1_thresh, nms_thres=FLAGS.nms1_thresh,geo_map=geometry, timer=timer)
-                boxes2, timer = detect(score_map=score[...,2][...,np.newaxis], score_map_thresh=FLAGS.score2_map_thresh, box_thresh=FLAGS.box2_thresh, nms_thres=FLAGS.nms2_thresh,geo_map=geometry, timer=timer)
+                boxes1, timer = detect(score_map=score[...,0][...,np.newaxis], score_map_thresh=FLAGS.score1_map_thresh, box_thresh=FLAGS.box1_thresh, nms_thres=FLAGS.nms1_thresh,geo_map=geometry, timer=timer)
+                boxes2, timer = detect(score_map=score[...,1][...,np.newaxis], score_map_thresh=FLAGS.score2_map_thresh, box_thresh=FLAGS.box2_thresh, nms_thres=FLAGS.nms2_thresh,geo_map=geometry, timer=timer)
                 boxes = np.concatenate([boxes1,boxes2],axis=0)
                 num_text_boxes = boxes1.shape[0]
 
@@ -220,13 +223,13 @@ def main(argv=None):
                     img_path = os.path.join(FLAGS.output_dir, os.path.basename(im_fn))
                     cv2.imwrite(img_path, im[:, :, ::-1])
                     print(score.shape, np.unique(score))
-                    score_img = Image.fromarray((score[0,:,:,1]*255).astype(np.uint8))
+                    score_img = Image.fromarray((score[0,:,:,0]*255).astype(np.uint8))
                     score_res_file = os.path.join(
                         FLAGS.output_dir,
                         '{}_score1.png'.format(
                             os.path.basename(im_fn).split('.')[0]))
                     score_img.save(score_res_file)
-                    score_img = Image.fromarray((score[0,:,:,2]*255).astype(np.uint8))
+                    score_img = Image.fromarray((score[0,:,:,1]*255).astype(np.uint8))
                     score_res_file = os.path.join(
                         FLAGS.output_dir,
                         '{}_score2.png'.format(
