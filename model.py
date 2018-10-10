@@ -142,7 +142,7 @@ def loss(y_true_cls, y_pred_cls,
         L_theta = 1 - tf.cos(theta_pred - theta_gt)
         return L_AABB, L_theta
     
-    y_true_mask = tf.logical_and(tf.where(y_true_cls_1,1), tf.where(y_true_cls_2,1))
+    y_true_mask = tf.logical_and(tf.greater_equal(y_true_cls_1,1), tf.greater_equal(y_true_cls_2,1))
     y_true_geo1, y_true_geo2 = tf.split(y_true_geo_two, num_or_size_splits=2, axis=3)
     y_pred_geo1, y_pred_geo2 = tf.split(y_pred_geo_two, num_or_size_splits=2, axis=3)
     L_AABB1, L_theta1 = loss_(y_true_geo1, y_pred_geo1)
