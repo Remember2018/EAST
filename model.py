@@ -75,9 +75,13 @@ def model(images, weight_decay=1e-5, is_training=True):
             # this is do with the angle map
             F_score = slim.conv2d(g[3], 2, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) # here, we have two classes
             # 4 channel of axis aligned bbox and 1 channel rotation angle
-            geo_map = slim.conv2d(g[3], 4, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) * FLAGS.text_scale
-            angle_map = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
-            F_geometry = tf.concat([geo_map, angle_map], axis=-1)
+            geo_map1 = slim.conv2d(g[3], 4, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) * FLAGS.text_scale
+            angle_map1 = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
+            F_geometry1 = tf.concat([geo_map1, angle_map1], axis=-1)
+            geo_map2 = slim.conv2d(g[3], 4, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) * FLAGS.text_scale
+            angle_map2 = (slim.conv2d(g[3], 1, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=None) - 0.5) * np.pi/2 # angle is between [-45, 45]
+            F_geometry2 = tf.concat([geo_map, angle_map], axis=-1)
+            F_geometry = tf.concat([F_geometry1, F_geometry2], axis=-1)
 
     return F_score, F_geometry
 
@@ -101,7 +105,7 @@ def dice_coefficient(y_true_cls, y_pred_cls,
 
 
 def loss(y_true_cls, y_pred_cls,
-         y_true_geo, y_pred_geo,
+         y_true_geo_two, y_pred_geo_two,
          training_mask, loss_type='dice'):
     '''
     define the loss used for training, contraning two part,
@@ -114,34 +118,40 @@ def loss(y_true_cls, y_pred_cls,
     :param training_mask: mask used in training, to ignore some text annotated by ###
     :return:
     '''
-    if loss_type=='dice':
-        y_true_cls_1 = tf.expand_dims(y_true_cls[...,0],-1)
-        y_true_cls_2 = tf.expand_dims(y_true_cls[...,1],-1)
-        y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,0],-1)
-        y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,1],-1)
-        classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
-        classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
-        # scale classification loss to match the iou loss part
-        classification_loss = (classification_loss_1 + classification_loss_2)
-    elif loss_type=='sce':
-        # y_true_cls: [N,H,W,1]
-        # y_pred_cls: [N,H,W,2]
-        classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y_pred_cls,labels=tf.cast(y_true_cls[...,0],tf.int32)))
 
-    # d1 -> top, d2->right, d3->bottom, d4->left
-    d1_gt, d2_gt, d3_gt, d4_gt, theta_gt = tf.split(value=y_true_geo, num_or_size_splits=5, axis=3)
-    d1_pred, d2_pred, d3_pred, d4_pred, theta_pred = tf.split(value=y_pred_geo, num_or_size_splits=5, axis=3)
-    area_gt = (d1_gt + d3_gt) * (d2_gt + d4_gt)
-    area_pred = (d1_pred + d3_pred) * (d2_pred + d4_pred)
-    w_union = tf.minimum(d2_gt, d2_pred) + tf.minimum(d4_gt, d4_pred)
-    h_union = tf.minimum(d1_gt, d1_pred) + tf.minimum(d3_gt, d3_pred)
-    area_intersect = w_union * h_union
-    area_union = area_gt + area_pred - area_intersect
-    L_AABB = -tf.log((area_intersect + 1.0)/(area_union + 1.0))
-    L_theta = 1 - tf.cos(theta_pred - theta_gt)
-    tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_cls * training_mask))
-    tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_cls * training_mask))
+    y_true_cls_1 = tf.expand_dims(y_true_cls[...,0],-1)
+    y_true_cls_2 = tf.expand_dims(y_true_cls[...,1],-1)
+    y_pred_cls_1 = tf.expand_dims(y_pred_cls[...,0],-1)
+    y_pred_cls_2 = tf.expand_dims(y_pred_cls[...,1],-1)
+    classification_loss_1 = dice_coefficient(y_true_cls_1, y_pred_cls_1, training_mask)
+    classification_loss_2 = dice_coefficient(y_true_cls_2, y_pred_cls_2, training_mask)
+    # scale classification loss to match the iou loss part
+    classification_loss = (classification_loss_1 + classification_loss_2)
+
+    def loss_(y_true_geo, y_pred_geo):
+        # d1 -> top, d2->right, d3->bottom, d4->left
+        d1_gt, d2_gt, d3_gt, d4_gt, theta_gt = tf.split(value=y_true_geo, num_or_size_splits=5, axis=3)
+        d1_pred, d2_pred, d3_pred, d4_pred, theta_pred = tf.split(value=y_pred_geo, num_or_size_splits=5, axis=3)
+        area_gt = (d1_gt + d3_gt) * (d2_gt + d4_gt)
+        area_pred = (d1_pred + d3_pred) * (d2_pred + d4_pred)
+        w_union = tf.minimum(d2_gt, d2_pred) + tf.minimum(d4_gt, d4_pred)
+        h_union = tf.minimum(d1_gt, d1_pred) + tf.minimum(d3_gt, d3_pred)
+        area_intersect = w_union * h_union
+        area_union = area_gt + area_pred - area_intersect
+        L_AABB = -tf.log((area_intersect + 1.0)/(area_union + 1.0))
+        L_theta = 1 - tf.cos(theta_pred - theta_gt)
+        return L_AABB, L_theta
+    
+    y_true_mask = tf.logical_and(tf.where(y_true_cls_1,1), tf.where(y_true_cls_2,1))
+    y_true_geo1, y_true_geo2 = tf.split(y_true_geo_two, num_or_size_splits=2, axis=3)
+    y_pred_geo1, y_pred_geo2 = tf.split(y_pred_geo_two, num_or_size_splits=2, axis=3)
+    L_AABB1, L_theta1 = loss_(y_true_geo1, y_pred_geo1)
+    L_AABB2, L_theta2 = loss_(y_true_geo2, y_pred_geo2)
+    L_AABB = L_AABB1 + L_AABB2
+    L_theta = L_theta1 + L_theta2
+    tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_mask * training_mask))
+    tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_mask * training_mask))
     tf.summary.scalar('classification_loss', classification_loss)
     L_g = L_AABB + 10 * L_theta
-
-    return tf.reduce_mean(L_g * y_true_cls * training_mask) + 0.01 * classification_loss
+    
+    return tf.reduce_mean(L_g * y_true_mask * training_mask) + 0.01 * classification_loss
