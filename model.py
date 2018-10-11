@@ -142,17 +142,19 @@ def loss(y_true_cls, y_pred_cls,
         L_theta = 1 - tf.cos(theta_pred - theta_gt)
         return L_AABB, L_theta
     
-    y_true_mask = tf.cast(tf.logical_or(tf.greater_equal(y_true_cls_1,1), tf.greater_equal(y_true_cls_2,1)),tf.float32)
+    y_true_mask1 = tf.cast(tf.greater_equal(y_true_cls_1,1), tf.float32) 
+    y_true_mask2 = tf.cast(tf.greater_equal(y_true_cls_2,1), tf.float32)
 
     y_true_geo1, y_true_geo2 = tf.split(y_true_geo_two, num_or_size_splits=2, axis=3)
     y_pred_geo1, y_pred_geo2 = tf.split(y_pred_geo_two, num_or_size_splits=2, axis=3)
     L_AABB1, L_theta1 = loss_(y_true_geo1, y_pred_geo1)
     L_AABB2, L_theta2 = loss_(y_true_geo2, y_pred_geo2)
-    L_AABB = L_AABB1 + L_AABB2
-    L_theta = L_theta1 + L_theta2
-    tf.summary.scalar('geometry_AABB', tf.reduce_mean(L_AABB * y_true_mask * training_mask))
-    tf.summary.scalar('geometry_theta', tf.reduce_mean(L_theta * y_true_mask * training_mask))
+    L_g1 = L_AABB1 + 10 * L_theta1
+    L_g2 = L_AABB2 + 10 * L_theta2
+    tf.summary.scalar('geometry_AABB1', tf.reduce_mean(L_AABB1 * y_true_mask1 * training_mask))
+    tf.summary.scalar('geometry_theta1', tf.reduce_mean(L_theta1 * y_true_mask1 * training_mask))
+    tf.summary.scalar('geometry_AABB2', tf.reduce_mean(L_AABB2 * y_true_mask2 * training_mask))
+    tf.summary.scalar('geometry_theta2', tf.reduce_mean(L_theta2 * y_true_mask2 * training_mask))
     tf.summary.scalar('classification_loss', classification_loss)
-    L_g = L_AABB + 10 * L_theta
     
-    return tf.reduce_mean(L_g * y_true_mask * training_mask) + 0.01 * classification_loss
+    return tf.reduce_mean(L_g1 * y_true_mask1 * training_mask) + tf.reduce_mean(L_g2 * y_true_mask2 * training_mask) + 0.01 * classification_loss
