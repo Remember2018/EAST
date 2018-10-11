@@ -123,7 +123,7 @@ def loss(y_true_cls, y_pred_cls,
     # scale classification loss to match the iou loss part
     classification_loss = (classification_loss_1 + classification_loss_2)
 
-    y_true_mask = tf.cast(tf.logical_and(tf.greater_equal(y_true_cls_1,1), tf.greater_equal(y_true_cls_2,1)),tf.float32)
+    y_true_mask = tf.cast(tf.logical_or(tf.greater_equal(y_true_cls_1,1), tf.greater_equal(y_true_cls_2,1)),tf.float32)
 
     # d1 -> top, d2->right, d3->bottom, d4->left
     d1_gt, d2_gt, d3_gt, d4_gt, theta_gt = tf.split(value=y_true_geo, num_or_size_splits=5, axis=3)

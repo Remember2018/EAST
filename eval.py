@@ -114,11 +114,11 @@ def detect(score_map, geo_map, timer, score_map_thresh=0.8, box_thresh=0.1, nms_
         return np.zeros((0,9),dtype=np.float32), timer
 
     # here we filter some low score boxes by the average score map, this is different from the orginal paper
-    # for i, box in enumerate(boxes):
-    #     mask = np.zeros_like(score_map, dtype=np.uint8)
-    #     cv2.fillPoly(mask, box[:8].reshape((-1, 4, 2)).astype(np.int32) // 4, 1)
-    #     boxes[i, 8] = cv2.mean(score_map, mask)[0]
-    # boxes = boxes[boxes[:, 8] > box_thresh]
+    for i, box in enumerate(boxes):
+        mask = np.zeros_like(score_map, dtype=np.uint8)
+        cv2.fillPoly(mask, box[:8].reshape((-1, 4, 2)).astype(np.int32) // 4, 1)
+        boxes[i, 8] = cv2.mean(score_map, mask)[0]
+    boxes = boxes[boxes[:, 8] > box_thresh]
 
     return boxes, timer
 
@@ -172,7 +172,6 @@ def main(argv=None):
                 score, geometry = sess.run([f_score, f_geometry], feed_dict={input_images: [im_resized]})
                 timer['net'] = time.time() - start
 
-                angle1_map = geometry[0,:,:,4]
 
                 boxes1, timer = detect(score_map=score[...,0][...,np.newaxis], score_map_thresh=FLAGS.score1_map_thresh, box_thresh=FLAGS.box1_thresh, nms_thres=FLAGS.nms1_thresh,geo_map=geometry, timer=timer)
                 boxes2, timer = detect(score_map=score[...,1][...,np.newaxis], score_map_thresh=FLAGS.score2_map_thresh, box_thresh=FLAGS.box2_thresh, nms_thres=FLAGS.nms2_thresh,geo_map=geometry, timer=timer)
@@ -237,14 +236,6 @@ def main(argv=None):
                         '{}_score2.png'.format(
                             os.path.basename(im_fn).split('.')[0]))
                     score_img.save(score_res_file)
-
-                    score_img = Image.fromarray((geometry[0,:,:,4]).astype(np.uint8))
-                    score_res_file = os.path.join(
-                        FLAGS.output_dir,
-                        '{}_anglemap.png'.format(
-                            os.path.basename(im_fn).split('.')[0]))
-                    score_img.save(score_res_file)
-
 
 if __name__ == '__main__':
     tf.app.run()
