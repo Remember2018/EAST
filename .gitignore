@@ -105,3 +105,8 @@ ENV/
 
 # result files for demo
 static/results
+
+test_images*
+.project
+.pydevproject
+.setting*
